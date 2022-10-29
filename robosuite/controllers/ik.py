@@ -24,6 +24,7 @@ except ImportError:
     )
 import os
 from os.path import join as pjoin
+from time import sleep
 import robosuite
 
 from robosuite.controllers.joint_vel import JointVelocityController
@@ -33,7 +34,7 @@ import numpy as np
 
 
 # Dict of supported ik robots
-SUPPORTED_IK_ROBOTS = {"Baxter", "Sawyer", "Panda"}
+SUPPORTED_IK_ROBOTS = {"Baxter", "Sawyer", "Panda", "UR5e"}
 
 
 class PyBulletServer(object):
@@ -241,7 +242,7 @@ class InverseKinematicsController(JointVelocityController):
             os.path.join(robosuite.models.assets_root, "bullet_data"),
             "{}_description/urdf/{}_arm.urdf".format(self.robot_name.lower(), self.robot_name.lower())
         )
-
+        print(self.robot_urdf)
         # import reference to the global pybullet server and load the urdfs
         from robosuite.controllers import get_pybullet_server
         if load_urdf:
@@ -732,3 +733,42 @@ class InverseKinematicsController(JointVelocityController):
     @property
     def name(self):
         return 'IK_POSE'
+
+
+if __name__ == '__main__':
+    print("Testing IK controller with UR5e")
+    # Load the desired controller
+    import robosuite as suite
+    from robosuite.controllers import load_controller_config
+    
+    # Create dict to hold options that will be passed to env creation call
+    options = {}
+    # Choose environment and add it to options
+    options["env_name"] = "Lift"
+    options["robots"] = "UR5e"
+    options["controller_configs"] = suite.load_controller_config(default_controller="IK_POSE")
+
+    # Define variables for each controller test
+    action_dim = 6
+    num_test_steps = 6 
+    test_value = 0.01
+
+    # Define the number of timesteps to use per controller action as well as timesteps in between actions
+    steps_per_action = 75
+    steps_per_rest = 75
+
+    # initialize the task
+    env = suite.make(
+        **options,
+        has_renderer=True,
+        has_offscreen_renderer=False,
+        ignore_done=True,
+        use_camera_obs=False,
+        horizon=(steps_per_action + steps_per_rest) * num_test_steps,
+        control_freq=20,
+    )
+    env.reset()
+    env.viewer.set_camera(camera_id=0)
+
+    for i in range(1000):
+        sleep(3)
