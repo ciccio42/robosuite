@@ -1,6 +1,7 @@
 from robosuite.models.base import MujocoXMLModel
 from robosuite.utils.mjcf_utils import array_to_string, ROBOT_COLLISION_COLOR, string_to_array
 from robosuite.utils.transform_utils import euler2mat, mat2quat
+from robosuite.utils.mjcf_utils import find_elements, new_element
 
 import numpy as np
 
@@ -102,6 +103,38 @@ class RobotModel(MujocoXMLModel, metaclass=RobotModelMeta):
             "Values must be same size as joint dimension. Got {}, expected {}!".format(values.size, self.dof)
         for i, joint in enumerate(self._elements["joints"]):
             joint.set(attrib, array_to_string(np.array([values[i]])))
+
+    def set_camera(self, camera_name, pos, quat, root="world", camera_attribs=None):
+        """
+        Sets a camera with @camera_name. If the camera already exists, then this overwrites its pos and quat values.
+
+        Args:
+            camera_name (str): Camera name to search for / create
+            pos (3-array): (x,y,z) coordinates of camera in root frame
+            quat (4-array): (w,x,y,z) quaternion of camera in root frame
+            root (str): name of the root frame to use as reference for setting the position and the orientation 
+            camera_attribs (dict): If specified, should be additional keyword-mapped attributes for this camera.
+                See http://www.mujoco.org/book/XMLreference.html#camera for exact attribute specifications.
+        """
+        # find the root
+        root = find_elements(root=self.worldbody, tags="body", attribs={"name": f"{self.naming_prefix}right_hand"}, return_first=True)
+        
+        # find the camera
+        camera = find_elements(root=root, tags="camera", attribs={"name": f"{self.naming_prefix}{camera_name}"}, return_first=True)
+
+                # Compose attributes
+        if camera_attribs is None:
+            camera_attribs = {}
+        camera_attribs["pos"] = array_to_string(pos)
+        camera_attribs["quat"] = array_to_string(quat)
+
+        if camera is None:
+            # If camera doesn't exist, then add a new camera with the specified attributes
+            root.append(new_element(tag="camera", name=camera_name, **camera_attribs))
+        else:
+            # Otherwise, we edit all specified attributes in that camera
+            for attrib, value in camera_attribs.items():
+                camera.set(attrib, value)
 
     def add_mount(self, mount):
         """
