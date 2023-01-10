@@ -31,3 +31,10 @@ setup(
     long_description=long_description,
     long_description_content_type='text/markdown'
 )
+
+
+if __name__ == '__main__':
+    packages=[
+        package for package in find_packages()
+    ]
+    print(packages)

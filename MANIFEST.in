@@ -1,2 +1,3 @@
 recursive-include robosuite/models/assets/ *
 recursive-include robosuite/controllers/config/ *
+recursive-include robosuite/environments/ *
