@@ -162,10 +162,11 @@ class InverseKinematicsController(JointVelocityController):
         # Verify robot is supported by IK
         assert robot_name in SUPPORTED_IK_ROBOTS, "Error: Tried to instantiate IK controller for unsupported robot! " \
                                                   "Inputted robot: {}, Supported robots: {}".format(
-            robot_name, SUPPORTED_IK_ROBOTS)
+                                                      robot_name, SUPPORTED_IK_ROBOTS)
 
         # Initialize ik-specific attributes
-        self.robot_name = robot_name        # Name of robot (e.g.: "Panda", "Sawyer", etc.)
+        # Name of robot (e.g.: "Panda", "Sawyer", etc.)
+        self.robot_name = robot_name
 
         # Override underlying control dim
         self.control_dim = 6
@@ -195,10 +196,13 @@ class InverseKinematicsController(JointVelocityController):
         self.robot_urdf = None
         self.num_bullet_joints = None
         self.bullet_ee_idx = None
-        self.bullet_joint_indexes = None   # Useful for splitting right and left hand indexes when controlling bimanual
-        self.ik_command_indexes = None     # Relevant indices from ik loop; useful for splitting bimanual left / right
+        # Useful for splitting right and left hand indexes when controlling bimanual
+        self.bullet_joint_indexes = None
+        # Relevant indices from ik loop; useful for splitting bimanual left / right
+        self.ik_command_indexes = None
         self.ik_robot_target_pos_offset = None
-        self.base_orn_offset_inv = None         # inverse orientation offset from pybullet base to world
+        # inverse orientation offset from pybullet base to world
+        self.base_orn_offset_inv = None
         self.converge_steps = converge_steps
 
         # Set ik limits and override internal min / max
@@ -207,7 +211,8 @@ class InverseKinematicsController(JointVelocityController):
 
         # Target pos and ori
         self.ik_robot_target_pos = None
-        self.ik_robot_target_orn = None                 # note: this currently isn't being used at all
+        # note: this currently isn't being used at all
+        self.ik_robot_target_orn = None
 
         # Commanded pos and resulting commanded vel
         self.commanded_joint_positions = None
@@ -240,7 +245,8 @@ class InverseKinematicsController(JointVelocityController):
         # get paths to urdfs
         self.robot_urdf = pjoin(
             os.path.join(robosuite.models.assets_root, "bullet_data"),
-            "{}_description/urdf/{}_arm.urdf".format(self.robot_name.lower(), self.robot_name.lower())
+            "{}_description/urdf/{}_arm.urdf".format(
+                self.robot_name.lower(), self.robot_name.lower())
         )
         # import reference to the global pybullet server and load the urdfs
         from robosuite.controllers import get_pybullet_server
@@ -256,7 +262,8 @@ class InverseKinematicsController(JointVelocityController):
             self.ik_robot = max(get_pybullet_server().bodies)
 
         # load the number of joints from the bullet data
-        self.num_bullet_joints = p.getNumJoints(self.ik_robot, physicsClientId=self.bullet_server_id)
+        self.num_bullet_joints = p.getNumJoints(
+            self.ik_robot, physicsClientId=self.bullet_server_id)
 
         # Disable collisions between all the joints
         for joint in range(self.num_bullet_joints):
@@ -281,10 +288,12 @@ class InverseKinematicsController(JointVelocityController):
             elif "left" in self.eef_name:
                 self.bullet_ee_idx = 45
                 self.bullet_joint_indexes = [31, 32, 33, 34, 35, 37, 38]
-                self.ik_command_indexes = np.arange(self.joint_dim + 1, self.joint_dim * 2 + 1)
+                self.ik_command_indexes = np.arange(
+                    self.joint_dim + 1, self.joint_dim * 2 + 1)
             else:
                 # Error with inputted id
-                raise ValueError("Error loading ik controller for Baxter -- arm id's must contain 'right' or 'left'!")
+                raise ValueError(
+                    "Error loading ik controller for Baxter -- arm id's must contain 'right' or 'left'!")
         else:
             # Default assumes pybullet has same number of joints compared to mujoco sim
             self.bullet_ee_idx = self.num_bullet_joints - 1
@@ -359,7 +368,7 @@ class InverseKinematicsController(JointVelocityController):
                     targetValue=joint_positions[i],
                     targetVelocity=0,
                     physicsClientId=self.bullet_server_id
-                  )
+                )
 
     def ik_robot_eef_joint_cartesian_pose(self):
         """
@@ -386,10 +395,12 @@ class InverseKinematicsController(JointVelocityController):
         world_pose_in_base = T.pose_inv(base_pose_in_world)
 
         # Update reference to inverse orientation offset from pybullet base frame to world frame
-        self.base_orn_offset_inv = T.quat2mat(T.quat_inverse(base_orn_in_world))
+        self.base_orn_offset_inv = T.quat2mat(
+            T.quat_inverse(base_orn_in_world))
 
         # Update reference target orientation
-        self.reference_target_orn = T.quat_multiply(self.reference_target_orn, base_orn_in_world)
+        self.reference_target_orn = T.quat_multiply(
+            self.reference_target_orn, base_orn_in_world)
 
         eef_pose_in_base = T.pose_in_A_to_pose_in_B(
             pose_A=eef_pose_in_world, pose_A_in_B=world_pose_in_base
@@ -452,8 +463,10 @@ class InverseKinematicsController(JointVelocityController):
                 endEffectorLinkIndex=self.bullet_ee_idx,
                 targetPosition=target_position,
                 targetOrientation=target_orientation,
-                lowerLimits=list(self.sim.model.jnt_range[self.joint_index, 0]),
-                upperLimits=list(self.sim.model.jnt_range[self.joint_index, 1]),
+                lowerLimits=list(
+                    self.sim.model.jnt_range[self.joint_index, 0]),
+                upperLimits=list(
+                    self.sim.model.jnt_range[self.joint_index, 1]),
                 jointRanges=list(self.sim.model.jnt_range[self.joint_index, 1] -
                                  self.sim.model.jnt_range[self.joint_index, 0]),
                 restPoses=self.rest_poses,
@@ -485,7 +498,8 @@ class InverseKinematicsController(JointVelocityController):
 
         # Determine targets based on whether we're using interpolator(s) or not
         if self.interpolator_pos or self.interpolator_ori:
-            targets = (self.ee_pos + dpos + self.ik_robot_target_pos_offset, T.mat2quat(rotation))
+            targets = (self.ee_pos + dpos +
+                       self.ik_robot_target_pos_offset, T.mat2quat(rotation))
         else:
             targets = (self.ik_robot_target_pos + dpos, T.mat2quat(rotation))
 
@@ -503,7 +517,8 @@ class InverseKinematicsController(JointVelocityController):
         # Converge to IK solution
         arm_joint_pos = None
         for bullet_i in range(self.converge_steps):
-            arm_joint_pos = self.inverse_kinematics(world_targets[0], world_targets[1])
+            arm_joint_pos = self.inverse_kinematics(
+                world_targets[0], world_targets[1])
             self.sync_ik_robot(arm_joint_pos, sync_last=True)
 
         return arm_joint_pos
@@ -521,7 +536,8 @@ class InverseKinematicsController(JointVelocityController):
         pose_in_base = T.pose2mat(pose_in_base)
 
         base_pos_in_world, base_orn_in_world = \
-            np.array(p.getBasePositionAndOrientation(self.ik_robot, physicsClientId=self.bullet_server_id))
+            np.array(p.getBasePositionAndOrientation(self.ik_robot,
+                     physicsClientId=self.bullet_server_id),  dtype=object)
 
         base_pose_in_world = T.pose2mat((base_pos_in_world, base_orn_in_world))
 
@@ -552,13 +568,17 @@ class InverseKinematicsController(JointVelocityController):
         # Set interpolated goals if necessary
         if self.interpolator_pos is not None:
             # Absolute position goal
-            self.interpolator_pos.set_goal(dpos * self.user_sensitivity + self.reference_target_pos)
+            self.interpolator_pos.set_goal(
+                dpos * self.user_sensitivity + self.reference_target_pos)
 
         if self.interpolator_ori is not None:
             # Relative orientation goal
-            self.interpolator_ori.set_goal(dquat)  # goal is the relative change in orientation
-            self.ori_ref = np.array(self.ee_ori_mat)  # reference is the current orientation at start
-            self.relative_ori = np.zeros(3)  # relative orientation always starts at 0
+            # goal is the relative change in orientation
+            self.interpolator_ori.set_goal(dquat)
+            # reference is the current orientation at start
+            self.ori_ref = np.array(self.ee_ori_mat)
+            # relative orientation always starts at 0
+            self.relative_ori = np.zeros(3)
 
         # Run ik prepropressing to convert pos, quat ori to desired velocities
         requested_control = self._make_input(delta, self.reference_target_orn)
@@ -600,7 +620,8 @@ class InverseKinematicsController(JointVelocityController):
             # Linear case
             if self.interpolator_ori.order == 1:
                 # relative orientation based on difference between current ori and ref
-                self.relative_ori = orientation_error(self.ee_ori_mat, self.ori_ref)
+                self.relative_ori = orientation_error(
+                    self.ee_ori_mat, self.ori_ref)
                 ori_error = self.interpolator_ori.get_interpolated_goal()
                 rotation = T.quat2mat(ori_error)
             else:
@@ -612,7 +633,8 @@ class InverseKinematicsController(JointVelocityController):
 
         # Only update the velocity goals if we're interpolating
         if update_velocity_goal:
-            velocities = self.get_control(dpos=(desired_pos - self.ee_pos), rotation=rotation)
+            velocities = self.get_control(
+                dpos=(desired_pos - self.ee_pos), rotation=rotation)
             super().set_goal(velocities)
 
         # Run controller with given action
@@ -726,7 +748,8 @@ class InverseKinematicsController(JointVelocityController):
                 - (np.array) minimum control values
                 - (np.array) maximum control values
         """
-        max_limit = np.concatenate([self.ik_pos_limit * np.ones(3), self.ik_ori_limit * np.ones(3)])
+        max_limit = np.concatenate(
+            [self.ik_pos_limit * np.ones(3), self.ik_ori_limit * np.ones(3)])
         return -max_limit, max_limit
 
     @property
@@ -739,17 +762,18 @@ if __name__ == '__main__':
     # Load the desired controller
     import robosuite as suite
     from robosuite.controllers import load_controller_config
-    
+
     # Create dict to hold options that will be passed to env creation call
     options = {}
     # Choose environment and add it to options
     options["env_name"] = "Lift"
     options["robots"] = "UR5e"
-    options["controller_configs"] = suite.load_controller_config(default_controller="IK_POSE")
+    options["controller_configs"] = suite.load_controller_config(
+        default_controller="IK_POSE")
 
     # Define variables for each controller test
     action_dim = 6
-    num_test_steps = 6 
+    num_test_steps = 6
     test_value = 0.01
 
     # Define the number of timesteps to use per controller action as well as timesteps in between actions

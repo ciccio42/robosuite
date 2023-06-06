@@ -126,6 +126,7 @@ class Stack(SingleArmEnv):
         robots,
         env_configuration="default",
         controller_configs=None,
+        mount_types="defaults",
         gripper_types="default",
         initialization_noise="default",
         table_full_size=(0.8, 0.8, 0.05),
@@ -169,7 +170,7 @@ class Stack(SingleArmEnv):
             robots=robots,
             env_configuration=env_configuration,
             controller_configs=controller_configs,
-            mount_types="default",
+            mount_types=mount_types,
             gripper_types=gripper_types,
             initialization_noise=initialization_noise,
             use_camera_obs=use_camera_obs,
@@ -252,7 +253,8 @@ class Stack(SingleArmEnv):
         r_reach = (1 - np.tanh(10.0 * dist)) * 0.25
 
         # grasping reward
-        grasping_cubeA = self._check_grasp(gripper=self.robots[0].gripper, object_geoms=self.cubeA)
+        grasping_cubeA = self._check_grasp(
+            gripper=self.robots[0].gripper, object_geoms=self.cubeA)
         if grasping_cubeA:
             r_reach += 0.25
 
@@ -284,7 +286,8 @@ class Stack(SingleArmEnv):
         super()._load_model()
 
         # Adjust base pose accordingly
-        xpos = self.robots[0].robot_model.base_xpos_offset["table"](self.table_full_size[0])
+        xpos = self.robots[0].robot_model.base_xpos_offset["table"](
+            self.table_full_size[0])
         self.robots[0].robot_model.set_base_xpos(xpos)
 
         # load model for table top workspace
@@ -322,8 +325,8 @@ class Stack(SingleArmEnv):
         )
         self.cubeA = BoxObject(
             name="cubeA",
-            size_min=[0.02, 0.02, 0.02], 
-            size_max=[0.02, 0.02, 0.02], 
+            size_min=[0.02, 0.02, 0.02],
+            size_max=[0.02, 0.02, 0.02],
             rgba=[1, 0, 0, 1],
             material=redwood,
         )
@@ -385,7 +388,8 @@ class Stack(SingleArmEnv):
 
             # Loop through all objects and reset their positions
             for obj_pos, obj_quat, obj in object_placements.values():
-                self.sim.data.set_joint_qpos(obj.joints[0], np.concatenate([np.array(obj_pos), np.array(obj_quat)]))
+                self.sim.data.set_joint_qpos(obj.joints[0], np.concatenate(
+                    [np.array(obj_pos), np.array(obj_quat)]))
 
     def _get_observation(self):
         """
@@ -429,7 +433,8 @@ class Stack(SingleArmEnv):
             di["cubeB_quat"] = cubeB_quat
 
             # relative positions between gripper and cubes
-            gripper_site_pos = np.array(self.sim.data.site_xpos[self.robots[0].eef_site_id])
+            gripper_site_pos = np.array(
+                self.sim.data.site_xpos[self.robots[0].eef_site_id])
             di[pr + "gripper_to_cubeA"] = gripper_site_pos - cubeA_pos
             di[pr + "gripper_to_cubeB"] = gripper_site_pos - cubeB_pos
             di["cubeA_to_cubeB"] = cubeA_pos - cubeB_pos
@@ -472,4 +477,5 @@ class Stack(SingleArmEnv):
 
         # Color the gripper visualization site according to its distance to the cube
         if vis_settings["grippers"]:
-            self._visualize_gripper_to_target(gripper=self.robots[0].gripper, target=self.cubeA)
+            self._visualize_gripper_to_target(
+                gripper=self.robots[0].gripper, target=self.cubeA)
